@@ -1,0 +1,56 @@
+CREATE OR REPLACE AND RESOLVE JAVA SOURCE NAMED database_object_resolver_api AS
+/*
+    Copyright 2019 Sergejs Vinniks
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+*/
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import database.DOMException;
+import database.DOM;
+import dom.DatabaseObject;
+import dom.Package;
+import simplegrammar.ParseException;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Clob;
+
+public class DatabaseObjectResolverAPI {
+
+    private static final Gson GSON = new GsonBuilder()
+            .serializeNulls()
+            .disableHtmlEscaping()
+            .create();
+    
+    public static <T extends DatabaseObject> Clob loadObjectDOM(Class<T> objectType, String owner, String objectName) throws SQLException, DOMException, ParseException {
+    
+        try (Connection connection = DriverManager.getConnection("jdbc:default:connection:")) {
+        
+            String domJson = GSON.toJson(DOM.load(connection, objectType, owner, objectName));
+            
+            Clob domClob = connection.createClob();
+            domClob.setString(1, domJson);
+            
+            return domClob;
+        
+        }
+        
+    }
+    
+    public static Clob loadPackageDOM(String owner, String name) throws SQLException, DOMException, ParseException {
+        return loadObjectDOM(Package.class, owner, name);
+    }
+
+}
